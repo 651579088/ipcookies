@@ -118,6 +118,9 @@ reply with that message back to the sender.
 If we receive SET-COOKIE and the cookie entry for the peer exists,
 we verify that echoed cookie in this message matches the entry, 
 and then use the suggested cookie to update the table.
+We also update the lifetime_log2 from the received packet.
+This will allow us to (somewhat) detect the blackholes which
+can arise later if the network topology changes.
 
 If we receive SETCOOKIE-NOT-EXPECTED, we verify its cookie
 using the stateless cookie creation algorithm for that peer, if there
@@ -146,7 +149,9 @@ server PREVIOUS cookie.
 If the verification against CURRENT cookie fails,
 the shim needs to send the SET-COOKIE message containing the 
 value of the calculated CURRENT cookie, and a copy of the received
-cookie in the echo-cookie field. No new state is created.
+cookie in the echo-cookie field. The packet needs to also contain
+a copy of the halflife_log2 field to inform the remote side on when
+to expect an update of the cookie. No new state is created.
 
 If the received cookie verifies against either the CURRENT or
 PREVIOUS calculated cookies, then the received datagram can be passed
