@@ -59,6 +59,9 @@ and also to allow the verification of the control messages.
 
 ********************************************************************/
 
+#define IPCOOKIE_DISABLE_COOKIES 0x01
+#define IPCOOKIE_EXPECTING_SETCOOKIE 0x02
+
 typedef struct ipcookie_entry {
   struct in6_addr peer;    /* Which peer this is for */
   uint16_t mtime_lo16;     /* Low bits of timestamp when this entry was 
@@ -162,24 +165,32 @@ It needs to look up the cookie cache if an entry for a given peer
 exists. If it exists, we act according to following:
 
 ENTRY EXISTS {
-We need to check the whether the
-(mtime_ts + 2^lifetime_log2) in that entry is already less than
-the current timestamp.
+We need to check the current timestamp to be within three cases:
+case 0 : below (mtime_ts+2^lifetime_log2)
+case 1 : between mtime_ts+2^lifetime_log2 and mtime_ts+2*2^lifetime_log2
+case 2 : above 2*2^lifetime_log2
 
-If it is, we look if the flag DISABLE_COOKIES is set.
+the following two groups are describing behavior on whether te DISABLE_COOKIES flag
+is set or not.
 
-If it is not, this means we haven't heard the SET-COOKIE 
-packet when we should have - so either the upstream
-packet with cookie or the return SET-COOKIE has been dropped. We need to 
-set the DISABLE_COOKIES, set the mtime_ts to the current timestamp, and 
-set the lifetime_log2 to a host-specific value which will determine when
-we try to reenable the cookies again for that peer.
+DISABLE_COOKIES is set:
+case 0: do nothing.
+case 1: do nothing.
+case 2: fallback wait-out period has expired. Clear DISABLE_COOKIES, update
+the mtime_ts, and set the lifetime_log2 to a policy-defined value of "COOKIE_PROBE_LT2".
 
-if the flag DISABLE_COOKIES is set, this means that the wait-out time has expired,
-and we can try to send the cookies again. We clear the flag, set the mtime_ts to current
-timestamp, and lifetime_log2 to zero (the assumption is that we can get the SET-COOKIE
-within a second, thus if an RTT is high, this value of zero would need to be changed on
-some basis. How this is done is TBD).
+DISABLE_COOKIES is cleared:
+case 0: do nothing.
+case 1: raise IPCOOKIE_EXPECTING_SETCOOKIE flag.
+case 2: if IPCOOKIE_EXPECTING_SETCOOKIE flag is raised, that means we did sent traffic
+but did not hear anything back. Therefore we can assume that the path has changed and
+the cookies or ICMP signaling are blocked, so we need to set the DISABLE_COOKIES and
+update the mtime_ts. We also need to set the lifetime_log2 to a policy-defined value
+which will determine the duration of the fallback period - "COOKIE_FALLBACK_LT2".
+
+NB: the above recovery mechanism is obviously inefficient. For now we define it this way
+only for simplicity sake. There are certainly better and quicker ways to recover, but
+we leave them for a more optimized implementation - since they are locally-significant only.
 
 }
 
@@ -203,9 +214,6 @@ implementation is certainly possible, but is not a focus at this time.
 
 If the flag DISABLE_COOKIES is set, then the packet needs to be sent as-is,
 with no cookie attached.
-
-If the flag DISABLE_COOKIES is not set, then we need to take the cookie
-value from the entry and insert it as a destination option.
 
 ********************************************************************/
 
