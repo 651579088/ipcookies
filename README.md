@@ -3,12 +3,18 @@ using the old and proven mechanisms.
 
 If the traffic is legitimate, then a single roundtrip ensures this:
 
-![alt tag](https://raw.github.com/ayourtch/ipcookies/master/cookies_legit_traffic.png)
+![alt tag](cookies_normal.png)
 
 If the traffic is spoofed, then the ICMP messages which are small enough, prevent
 the amplification attacks to take place:
 
-![alt tag](https://raw.github.com/ayourtch/ipcookies/master/cookies_spoofed_traffic.png)
+![alt tag](cookies_spoofing.png)
+
+During a legitimate conversation, cookies are rolled over by issuing a new cookie 
+and accepting the old cookie during a transition window
+
+![alt tag](cookies_rollover.png)
+
 
 Notes:
 

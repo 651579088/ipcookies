@@ -1,0 +1,9 @@
+title IP Cookies (Spoofing client)
+
+Spoofing Client-->Server: IP Packet
+note left of Server: initial client cookie
+Server->Genuine Client: ICMPv6 SET-COOKIE
+note left of Genuine Client: current server cookie
+Genuine Client->Server: ICMPv6 SETCOOKIE-NOT-EXPECTED
+note right of Server: current server cookie
+Server->Server: log and stop
