@@ -24,9 +24,8 @@ for the stateless "server" portion of the cookies:
 typedef struct ipcookie_state {
   time_t timestamp_prev; /* when was the previous ipcookie generation */
   time_t timestamp_curr; /* when was the current ipcookie generation */
-  uint16_t secret_len;   /* how long is the ipcookie secret array */
   uint8_t halflife_log2; /* Cookie's lifetime is 2*2^halflife_log2 seconds, 4 bit field */
-  char ipcookie_secret[1]; /* the secret data for ipcookie creation */
+  char ipcookie_secret[63]; /* the secret data for ipcookie creation */
 } ipcookie_state_t;
 
 /********************************************************************
