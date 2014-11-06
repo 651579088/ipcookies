@@ -280,7 +280,7 @@ ipcookie_full_state_t *mmap_ipcookies(void);
 void die_perror(char *msg);
 
 void ipcookies_icmp_send(void *buf, struct sockaddr_in6 icmp_dst_addr);
-ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct sockaddr_in6 src);
+ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct in6_addr *src);
 void ipcookie_update_mtime(ipcookie_entry_t *ce);
 
 enum {
@@ -296,6 +296,6 @@ enum {
  *     IPCOOKIE_MATCH_CURR: matched the current cookie
  */
 
-int ipcookie_verify_stateless(ipcookie_t testcookie, struct sockaddr_in6 src);
+int ipcookie_verify_stateless(ipcookie_t testcookie, struct in6_addr *src);
 
-void ipcookie_set_stateless(ipcookie_t *target_cookie, struct sockaddr_in6 peer);
+void ipcookie_set_stateless(ipcookie_t *target_cookie, struct in6_addr *peer);

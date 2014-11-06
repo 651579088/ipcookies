@@ -24,7 +24,7 @@ ipcookie_full_state_t *ipck = NULL;
 void process_icmp_set_cookie(void *buf, struct sockaddr_in6 icmp_src_addr) {
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
-  ipcookie_entry_t *ce = ipcookie_find_by_address(ipck, icmp_src_addr);
+  ipcookie_entry_t *ce = ipcookie_find_by_address(ipck, &icmp_src_addr.sin6_addr);
   if(ce) {
     if(!memcmp(ce->ipcookie, icmp_ipck->echoed_cookie, sizeof(ce->ipcookie))) {
       /* The echoed cookie has matched. We can update the entry. */
@@ -50,7 +50,7 @@ void process_icmp_set_cookie(void *buf, struct sockaddr_in6 icmp_src_addr) {
 void process_icmp_setcookie_not_expected(void *buf, struct sockaddr_in6 icmp_src_addr) {
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
-  int cookie_ok = ipcookie_verify_stateless(icmp_ipck->echoed_cookie, icmp_src_addr);
+  int cookie_ok = ipcookie_verify_stateless(icmp_ipck->echoed_cookie, &icmp_src_addr.sin6_addr);
   if (cookie_ok) {
     printf("cookied: received a valid setcookie_not_expected");
     if (AF_INET6 == icmp_src_addr.sin6_family) {
