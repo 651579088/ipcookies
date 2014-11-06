@@ -208,3 +208,86 @@ If the flag DISABLE_COOKIES is not set, then we need to take the cookie
 value from the entry and insert it as a destination option.
 
 ********************************************************************/
+
+/********************************************************************
+
+Packet format for the messages:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |     Type      |     Code      |          Checksum             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |  rsvd |lt_log2|             Reserved                          |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                                                               |
+      +                                                               +
+      |                  Echoed Cookie (96 bit)                       |
+      +                                                               +
+      |                                                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                                                               |
+      +                                                               +
+      |                  Requested Cookie (96 bit)                    |
+      +                                                               +
+      |                                                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+The ICMP message is therefore 8*4 = 32 bytes.
+
+lt_log2: 4 bits log2 of the expected cookie lifetime.
+         The receiver of a verified message should expect the
+         next update of requested cookie in 2^lt_log2 seconds.
+
+Echoed Cookie: The cookie echoed back in order to verify the source of
+         the ICMP message.
+
+Requested Cookie: Valid for SET-COOKIE, this is the value the sender
+         wants to see in all the messages coming from the target of
+         the ICMP message.
+
+********************************************************************/
+
+typedef struct icmp6_ipcookies {
+  ipcookie_t echoed_cookie;
+  ipcookie_t requested_cookie;
+} icmp6_ipcookies_t;
+
+#define IPCOOKIES_ICMP_SIZE (sizeof(struct icmp6_hdr) + sizeof(struct icmp6_ipcookies))
+
+#define icmp6_ipck_lt_log2 icmp6_data8[0]
+#define ICMP6_IPCK_LT_LOG2_MASK 0x0F
+
+#define ICMP6_IPCOOKIES 0x42
+
+#define ICMP6_IC_SET_COOKIE 0x1
+#define ICMP6_IC_SETCOOKIE_NOT_EXPECTED 0x02
+
+
+#define IPCOOKIES_PACKET_BUF_SIZE 1500
+
+
+
+ipcookie_full_state_t *mmap_ipcookies(void);
+void die_perror(char *msg);
+
+void ipcookies_icmp_send(void *buf, struct sockaddr_in6 icmp_dst_addr);
+ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct sockaddr_in6 src);
+void ipcookie_update_mtime(ipcookie_entry_t *ce);
+
+enum {
+  IPCOOKIE_NOMATCH = 0,
+  IPCOOKIE_MATCH_PREV,
+  IPCOOKIE_MATCH_CURR
+} ipcookie_match_enum_t;
+
+/*
+ *  ipcookie_verify_stateless returns:
+ *     IPCOOKIE_NOMATCH: not matched
+ *     IPCOOKIE_MATCH_PREV: matched the previous cookie
+ *     IPCOOKIE_MATCH_CURR: matched the current cookie
+ */
+
+int ipcookie_verify_stateless(ipcookie_t testcookie, struct sockaddr_in6 src);
+
+void ipcookie_set_stateless(ipcookie_t *target_cookie, struct sockaddr_in6 peer);
