@@ -23,14 +23,18 @@ void die_perror(char *msg) {
   exit(1);
 }
 
-void ipcookies_icmp_send(void *buf, struct sockaddr_in6 icmp_dst_addr) {
+void ipcookies_icmp_send(void *buf, struct in6_addr *icmp_dst_addr) {
   static int icmp_sock = -1;
+  struct sockaddr_in6 sa_dst;
 
   if (icmp_sock < 0) {
     icmp_sock = socket(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
   }
   if (icmp_sock > 0) {
-    sendto(icmp_sock, buf, IPCOOKIES_ICMP_SIZE, 0, (struct sockaddr *)&icmp_dst_addr, sizeof(icmp_dst_addr));
+    /* FIXME: recalculate the checksum here */
+    sa_dst.sin6_family = AF_INET6;
+    sa_dst.sin6_addr = *icmp_dst_addr;
+    sendto(icmp_sock, buf, IPCOOKIES_ICMP_SIZE, 0, (struct sockaddr *)&sa_dst, sizeof(sa_dst));
   }
 }
 

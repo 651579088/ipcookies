@@ -43,7 +43,7 @@ void process_icmp_set_cookie(void *buf, struct sockaddr_in6 icmp_src_addr) {
     memcpy(icmp_ipck->echoed_cookie, icmp_ipck->requested_cookie, sizeof(icmp_ipck->echoed_cookie));
     memset(icmp_ipck->requested_cookie, 0, sizeof(icmp_ipck->requested_cookie));
     icmp->icmp6_code = ICMP6_IC_SETCOOKIE_NOT_EXPECTED;
-    ipcookies_icmp_send(buf, icmp_src_addr);
+    ipcookies_icmp_send(buf, &icmp_src_addr.sin6_addr);
   }
 }
 
