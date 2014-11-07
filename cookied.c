@@ -29,8 +29,8 @@ void process_icmp_set_cookie(void *buf, struct sockaddr_in6 icmp_src_addr) {
     if(!memcmp(ce->ipcookie, icmp_ipck->echoed_cookie, sizeof(ce->ipcookie))) {
       /* The echoed cookie has matched. We can update the entry. */
       memcpy(ce->ipcookie, icmp_ipck->requested_cookie, sizeof(ce->ipcookie));
-      ipcookie_update_mtime(ce);
-      ce->lifetime_log2 = icmp->icmp6_ipck_lt_log2 & ICMP6_IPCK_LT_LOG2_MASK;
+      ipcookie_entry_update_mtime(ce);
+      ipcookie_entry_set_lifetime_log2(ce, icmp->icmp6_ipck_lt_log2 & ICMP6_IPCK_LT_LOG2_MASK);
     } else {
       /* 
        * The echoed cookie has not matched. Either it is a rollover time 

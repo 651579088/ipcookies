@@ -1,8 +1,8 @@
 all: cookied shim_ipcookies
 
-cookied: cookied.c ipcookies.c
+cookied: cookied.c ipcookies.c ipcookies_stateless.c
 
-shim_ipcookies: shim_ipcookies.c ipcookies.c
+shim_ipcookies: shim_ipcookies.c ipcookies.c ipcookies_stateless.c
 
 .PHONY: clean
 clean:

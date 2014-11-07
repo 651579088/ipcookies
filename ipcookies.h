@@ -59,18 +59,28 @@ and also to allow the verification of the control messages.
 
 ********************************************************************/
 
-#define IPCOOKIE_DISABLE_COOKIES 0x01
-#define IPCOOKIE_EXPECTING_SETCOOKIE 0x02
-
 typedef struct ipcookie_entry {
   struct in6_addr peer;    /* Which peer this is for */
   uint16_t mtime_lo16;     /* Low bits of timestamp when this entry was
                               last modified (aka when we saw the previous SET-COOKIE) */
-  uint8_t flags;           /* Flags of this entry */
-  uint8_t  lifetime_log2;  /* 4 bits field. Log2 of the expected lifetime.
-			      We should see a SET-COOKIE within mtime + 2^lifetime_log2 seconds */
+  uint8_t mtime_hi8;       /* high 8 bits of timestamp  */
+  uint8_t  flags_and_lifetime_log2;  /* Upper four bits are flags, lower four bits are log2 lifetime */
   ipcookie_t ipcookie;     /* The ipcookie itself */
 } ipcookie_entry_t;
+
+
+/* #define IPCOOKIE_ENTRY_FLAG_DISABLE_COOKIES please_use_functions_below_to_check_and_set */
+
+void ipcookie_entry_set_disable_cookies(ipcookie_entry_t *ce);
+void ipcookie_entry_clear_disable_cookies(ipcookie_entry_t *ce);
+int ipcookie_entry_isset_disable_cookies(ipcookie_entry_t *ce);
+
+/* #define IPCOOKIE_ENTRY_FLAG_EXPECTING_SETCOOKIE please_use_functions_below_to_check_and_set */
+
+void ipcookie_entry_set_expecting_setcookie(ipcookie_entry_t *ce);
+void ipcookie_entry_clear_expecting_setcookie(ipcookie_entry_t *ce);
+int ipcookie_entry_isset_expecting_setcookie(ipcookie_entry_t *ce);
+
 
 /********************************************************************
 
@@ -149,20 +159,32 @@ The shim's job is two fold:
 To help with the cookie updates, the following variables are defined,
 with the values adjustable by the local host.
 
-T_RECOVER:
+IPCOOKIE_T_RECOVER:
            interval (in seconds) to await for the SET-COOKIE message
            in reply to sent-out packet with cookie. After this period
            ends, the implementation falls back to cookie-less sending.
 
-COOKIE_FALLBACK_LT2:
+IPCOOKIE_FALLBACK_LT2:
            a log2 value of the time of cookie-less operation in case
            we detect the problem with signaling. In this implementation
            this is a host-wide constant, but can be optimized by the hosts
            since it is locally significant.
 
-COOKIE_TRY_LT2:
+IPCOOKIE_TRY_LT2:
            a log2 value of the time to try the cookies when the fallback
            period has expired and we are retrying to use the cookie again.
+********************************************************************/
+
+#define IPCOOKIE_T_RECOVER 3
+
+/* 2^8 = 256 seconds */
+#define IPCOOKIE_FALLBACK_LT2 8
+
+/* 2^3 = 8 seconds */
+#define IPCOOKIE_TRY_LT2 3
+
+
+/********************************************************************
 
 The below text discusses the operation of the shim on the receive
 and send paths.
@@ -193,8 +215,20 @@ exists. If it exists, we act according to following:
 ENTRY EXISTS {
 We need to check the current timestamp to be within three cases:
 case 0 : below (mtime_ts+2^lifetime_log2)
-case 1 : between mtime_ts+2^lifetime_log2 and mtime_ts+2^lifetime_log2+T_RECOVER
-case 2 : above mtime_ts+2^lifetime_log2 + T_RECOVER
+case 1 : between mtime_ts+2^lifetime_log2 and mtime_ts+2^lifetime_log2+IPCOOKIE_T_RECOVER
+case 2 : above mtime_ts+2^lifetime_log2 + IPCOOKIE_T_RECOVER
+
+********************************************************************/
+
+typedef enum {
+  IPCOOKIE_TS_STILL_VALID = 0,
+  IPCOOKIE_TS_RENEW_TIME,
+  IPCOOKIE_TS_PAST_RENEW_TIME
+} ipcookie_ts_check_t;
+
+ipcookie_ts_check_t check_ipcookie_entry_timestamp(ipcookie_entry_t *ce);
+
+/********************************************************************
 
 the following two groups are describing behavior depending on whether the DISABLE_COOKIES flag
 is set or not.
@@ -221,7 +255,7 @@ case 2: is IPCOOKIE_EXPECTING_SETCOOKIE flag set ?
     packet would cause a fallback process to be triggered. So, together with setting
     the IPCOOKIE_EXPECTING_SETCOOKIE flag we need to ALSO "rewind"
     the timestamp by setting it to a value (time_now-2^lifetime_log) - so that we
-    allow the protocol on the other side T_RECOVER seconds to react and send the SETCOOKIE
+    allow the protocol on the other side IPCOOKIE_T_RECOVER seconds to react and send the SETCOOKIE
     before the fallback is triggered.
 
 NB: There might be other ways to optimize of the recovery, but since the recovery
@@ -326,21 +360,10 @@ void die_perror(char *msg);
 
 void ipcookies_icmp_send(void *buf, struct in6_addr *icmp_dst_addr);
 ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct in6_addr *src);
-void ipcookie_update_mtime(ipcookie_entry_t *ce);
 
-enum {
-  IPCOOKIE_NOMATCH = 0,
-  IPCOOKIE_MATCH_PREV,
-  IPCOOKIE_MATCH_CURR
-} ipcookie_match_enum_t;
+void ipcookie_entry_update_mtime(ipcookie_entry_t *ce);
+void ipcookie_entry_set_lifetime_log2(ipcookie_entry_t *ce, int new_lifetime_log2);
+void ipcookie_entry_mtime_backdate_by_lifetime_log2(ipcookie_entry_t *ce);
 
-/*
- *  ipcookie_verify_stateless returns:
- *     IPCOOKIE_NOMATCH: not matched
- *     IPCOOKIE_MATCH_PREV: matched the previous cookie
- *     IPCOOKIE_MATCH_CURR: matched the current cookie
- */
+#include "ipcookies_stateless.h"
 
-int ipcookie_verify_stateless(ipcookie_t testcookie, struct in6_addr *src);
-
-void ipcookie_set_stateless(ipcookie_t *target_cookie, struct in6_addr *peer);

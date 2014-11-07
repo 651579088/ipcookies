@@ -42,17 +42,86 @@ ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct i
   return NULL;
 }
 
-void ipcookie_update_mtime(ipcookie_entry_t *ce) {
-  ce->mtime_lo16 = 0xffff & time(NULL);
+/*
+ * It's rather ugly to have them here but for now a separate header file
+ * just to hide the flags would confuse more than help.
+ */
+
+#define IPCOOKIE_ENTRY_MASK_LIFETIME_LOG2       0x0F
+#define IPCOOKIE_ENTRY_FLAG_DISABLE_COOKIES     0x10
+#define IPCOOKIE_ENTRY_FLAG_EXPECTING_SETCOOKIE 0x20
+#define IPCOOKIE_ENTRY_FLAG_RESERVED1           0x40
+#define IPCOOKIE_ENTRY_FLAG_RESERVED2           0x80
+
+void ipcookie_entry_set_disable_cookies(ipcookie_entry_t *ce) {
+  ce->flags_and_lifetime_log2 |= IPCOOKIE_ENTRY_FLAG_DISABLE_COOKIES;
 }
 
-int ipcookie_verify_stateless(ipcookie_t testcookie, struct in6_addr *src) {
-  /* FIXME */
-  return 0;
+void ipcookie_entry_clear_disable_cookies(ipcookie_entry_t *ce) {
+  ce->flags_and_lifetime_log2 &= ~IPCOOKIE_ENTRY_FLAG_DISABLE_COOKIES;
 }
 
-void ipcookie_set_stateless(ipcookie_t *target_cookie, struct in6_addr *peer) {
-  /* FIXME */
+int ipcookie_entry_isset_disable_cookies(ipcookie_entry_t *ce) {
+  return (ce->flags_and_lifetime_log2 & IPCOOKIE_ENTRY_FLAG_DISABLE_COOKIES);
+}
+
+void ipcookie_entry_set_expecting_setcookie(ipcookie_entry_t *ce) {
+  ce->flags_and_lifetime_log2 |= IPCOOKIE_ENTRY_FLAG_EXPECTING_SETCOOKIE;
+}
+
+void ipcookie_entry_clear_expecting_setcookie(ipcookie_entry_t *ce) {
+  ce->flags_and_lifetime_log2 &= ~IPCOOKIE_ENTRY_FLAG_EXPECTING_SETCOOKIE;
+}
+
+int ipcookie_entry_isset_expecting_setcookie(ipcookie_entry_t *ce) {
+  return(ce->flags_and_lifetime_log2 & IPCOOKIE_ENTRY_FLAG_EXPECTING_SETCOOKIE);
+}
+
+uint8_t ipcookie_entry_get_lifetime_log2(ipcookie_entry_t *ce) {
+  return (ce->flags_and_lifetime_log2 & IPCOOKIE_ENTRY_MASK_LIFETIME_LOG2);
+}
+
+
+void ipcookie_entry_update_mtime(ipcookie_entry_t *ce) {
+  time_t now = time(NULL);
+  ce->mtime_lo16 = 0xffff & now;
+  ce->mtime_hi8 = 0xff & (now >> 16);
+}
+
+/* Expand the timestamp from the low 24 bits */
+time_t expand_timestamp(time_t now, uint8_t hi8, uint16_t lo16) {
+  time_t now_lo24 = now & 0xFFFFFF;
+  time_t ts_zero_lo24 = now ^ now_lo24;
+  time_t ts_lo24 = lo16 | (hi8 << 16);
+  if (now_lo24 < ts_lo24) {
+    /* the overflow has occured in the meantime, normalize. */
+    ts_zero_lo24 -= 0x1000000;
+  }
+  return (ts_zero_lo24 | ts_lo24);
+}
+
+ipcookie_ts_check_t check_ipcookie_entry_timestamp(ipcookie_entry_t *ce) {
+  time_t now = time(NULL);
+  time_t ts = expand_timestamp(now, ce->mtime_hi8, ce->mtime_lo16);
+  time_t lifetime = (1 << ipcookie_entry_get_lifetime_log2(ce));
+
+  if (now < ts + lifetime) {
+    return IPCOOKIE_TS_STILL_VALID;
+  } else if (now < ts + lifetime + IPCOOKIE_T_RECOVER) {
+    return IPCOOKIE_TS_RENEW_TIME;
+  } else {
+    return IPCOOKIE_TS_PAST_RENEW_TIME;
+  }
+}
+
+void ipcookie_entry_set_lifetime_log2(ipcookie_entry_t *ce, int new_lifetime_log2) {
+  if( (new_lifetime_log2 < 256) && (new_lifetime_log2 >= 0) ) {
+    ce->flags_and_lifetime_log2 &= ~IPCOOKIE_ENTRY_MASK_LIFETIME_LOG2;
+    ce->flags_and_lifetime_log2 |= (new_lifetime_log2 & IPCOOKIE_ENTRY_MASK_LIFETIME_LOG2);
+  }
+}
+
+void ipcookie_entry_mtime_backdate_by_lifetime_log2(ipcookie_entry_t *ce) {
 }
 
 

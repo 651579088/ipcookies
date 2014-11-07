@@ -18,13 +18,67 @@
 
 #include "ipcookies.h"
 
+void ipcookie_entry_enter_fallback_mode(ipcookie_entry_t *ce) {
+  ipcookie_entry_set_disable_cookies(ce);
+  ipcookie_entry_update_mtime(ce);
+  ipcookie_entry_set_lifetime_log2(ce, IPCOOKIE_FALLBACK_LT2);
+}
 
-int ipcookies_shim_outbound_cookie(void *ipck, struct in6_addr *peer, void **cookie) {
+void ipcookie_entry_enter_late_recovery_mode(ipcookie_entry_t *ce) {
+  ipcookie_entry_set_expecting_setcookie(ce);
+  ipcookie_entry_mtime_backdate_by_lifetime_log2(ce);
+}
+
+void ipcookie_entry_past_renew_with_cookie(ipcookie_entry_t *ce, struct in6_addr *peer, void **ret_cookie) {
+  if(ipcookie_entry_isset_expecting_setcookie(ce)) {
+    ipcookie_entry_enter_fallback_mode(ce);
+  } else {
+    ipcookie_entry_enter_late_recovery_mode(ce);
+  }
+}
+
+void ipcookies_shim_outbound_ipcookie_entry_exists(ipcookie_entry_t *ce, struct in6_addr *peer, void **ret_cookie) {
+  int ts_check = check_ipcookie_entry_timestamp(ce);
+  if(ipcookie_entry_isset_disable_cookies(ce)) {
+    switch(ts_check) {
+      case IPCOOKIE_TS_STILL_VALID:
+	/* do nothing */
+	break;
+      case IPCOOKIE_TS_RENEW_TIME:
+	/* fallthrough */
+      case IPCOOKIE_TS_PAST_RENEW_TIME:
+	ipcookie_entry_clear_disable_cookies(ce);
+	ipcookie_entry_update_mtime(ce);
+	ipcookie_entry_set_lifetime_log2(ce, IPCOOKIE_TRY_LT2);
+	break;
+    }
+  } else {
+    switch(ts_check) {
+      case IPCOOKIE_TS_STILL_VALID:
+	/* do nothing */
+	break;
+      case IPCOOKIE_TS_RENEW_TIME:
+	ipcookie_entry_set_expecting_setcookie(ce);
+	break;
+      case IPCOOKIE_TS_PAST_RENEW_TIME:
+        ipcookie_entry_past_renew_with_cookie(ce, peer, ret_cookie);
+	break;
+    }
+  }
+}
+
+void ipcookies_shim_outbound_no_ipcookie_entry(ipcookie_entry_t *ce, struct in6_addr *peer, void **ret_cookie) {
+  /* FIXME */
+}
+
+int ipcookies_shim_outbound_cookie(void *ipck, struct in6_addr *peer, void **ret_cookie) {
   ipcookie_entry_t *ce = ipcookie_find_by_address(ipck, peer);
   if (ce) {
+    ipcookies_shim_outbound_ipcookie_entry_exists(ce, peer, ret_cookie);
   } else {
+    ipcookies_shim_outbound_no_ipcookie_entry(ce, peer, ret_cookie);
   }
-  return 0;
+  return (!ipcookie_entry_isset_disable_cookies(ce));
 }
 
 int ipcookies_shim_inbound_check_cookie(void *ipck, struct in6_addr *peer, void *cookie) {
