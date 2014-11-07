@@ -72,7 +72,7 @@ void receive_icmp(ipcookie_full_state_t *ipck, int icmp_sock) {
 
   nread = recvfrom(icmp_sock, buf, sizeof(buf), 0,
             (struct sockaddr *)&icmp_src_addr, &sockaddr_sz);
-  if (nread == IPCOOKIES_ICMP_SIZE) {
+  if (nread >= IPCOOKIES_ICMP_SIZE) {
     if(ICMP6_IPCOOKIES == icmp->icmp6_type) {
       switch(icmp->icmp6_code) {
         case ICMP6_IC_SET_COOKIE:
