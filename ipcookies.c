@@ -109,7 +109,7 @@ ipcookie_ts_check_t check_ipcookie_entry_timestamp(ipcookie_entry_t *ce) {
   time_t ts = expand_timestamp(now, ce->mtime_hi8, ce->mtime_lo16);
   time_t lifetime = (1 << ipcookie_entry_get_lifetime_log2(ce));
 
-  if (now < ts + lifetime) {
+  if ((now < ts + lifetime) || (1<<IPCOOKIE_LIFETIME_LOG2_INFINITE == lifetime)) {
     return IPCOOKIE_TS_STILL_VALID;
   } else if (now < ts + lifetime + IPCOOKIE_T_RECOVER) {
     return IPCOOKIE_TS_RENEW_TIME;
