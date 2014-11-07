@@ -94,7 +94,12 @@ int ipcookies_shim_outbound_cookie(void *ipck, int default_use_ipcookies, struct
     ce = ipcookies_shim_outbound_no_ipcookie_entry(ipck, default_use_ipcookies, peer, ret_cookie);
   }
   if (ce) {
-    return (!ipcookie_entry_isset_disable_cookies(ce));
+    if(ipcookie_entry_isset_disable_cookies(ce)) {
+      return 0;
+    } else {
+      *ret_cookie = ce->ipcookie;
+      return 1;
+    }
   } else {
     return 0;
   }
