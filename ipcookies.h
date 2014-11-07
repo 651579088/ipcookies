@@ -140,6 +140,32 @@ ignored, possibly with rate-limited logging.
 /********************************************************************
 
 The shim's job is two fold:
+  * on the receive path, if the received packets contain the cookie,
+    it triggers the verification/update signaling of the cookie if needed.
+  * on the send path, it creates and maintains the state of per-peer
+    cookies, and also deals with fallback in case the cookies or
+    the ICMP signaling are blocked on the path.
+
+To help with the cookie updates, the following variables are defined,
+with the values adjustable by the local host.
+
+T_RECOVER:
+           interval (in seconds) to await for the SET-COOKIE message
+           in reply to sent-out packet with cookie. After this period
+           ends, the implementation falls back to cookie-less sending.
+
+COOKIE_FALLBACK_LT2:
+           a log2 value of the time of cookie-less operation in case
+           we detect the problem with signaling. In this implementation
+           this is a host-wide constant, but can be optimized by the hosts
+           since it is locally significant.
+
+COOKIE_TRY_LT2:
+           a log2 value of the time to try the cookies when the fallback
+           period has expired and we are retrying to use the cookie again.
+
+The below text discusses the operation of the shim on the receive
+and send paths.
 
 On the receive path:
 
