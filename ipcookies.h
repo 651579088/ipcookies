@@ -4,13 +4,13 @@ This implements the conceptual IP cookie algorithm in a verbatim
 and naive way to ensure the simplicity and provide a reference
 implementation.
 
-The aim of this algorithm is to eventually mitigate the source-spoofing 
-amplification attacks related to protocols which trust the source 
+The aim of this algorithm is to eventually mitigate the source-spoofing
+amplification attacks related to protocols which trust the source
 address of the datagram.
 
 It consists of two parts: a cookie daemon and the shim.
 
-Cookie daemon maintains two structures in memory shared with the shim's 
+Cookie daemon maintains two structures in memory shared with the shim's
 instances:
 
 ipcookie_state_t ipcookie_state;
@@ -35,7 +35,7 @@ dataplane function takes the timestamp_curr or timestamp_prev, mixes in
 the peer address and the secret_len of ipcookie_secret, and passes it
 to the strong hash function.
 
-Then the resulting cookie is the 96 lowest significant bits of that 
+Then the resulting cookie is the 96 lowest significant bits of that
 hash value:
 
 ********************************************************************/
@@ -46,8 +46,8 @@ typedef uint8_t ipcookie_t[12];
 /********************************************************************
 
 The second data structure is the cookie state maintained for the peers
-requesting the cookie use, as well as a scratchpad to keep track 
-the explicit non-usage of the cookies for specific peers as both 
+requesting the cookie use, as well as a scratchpad to keep track
+the explicit non-usage of the cookies for specific peers as both
 client and server in order to perform the fallback (the remote side
 supports the cookies, but the required messages do not pass.
 
@@ -64,7 +64,7 @@ and also to allow the verification of the control messages.
 
 typedef struct ipcookie_entry {
   struct in6_addr peer;    /* Which peer this is for */
-  uint16_t mtime_lo16;     /* Low bits of timestamp when this entry was 
+  uint16_t mtime_lo16;     /* Low bits of timestamp when this entry was
                               last modified (aka when we saw the previous SET-COOKIE) */
   uint8_t flags;           /* Flags of this entry */
   uint8_t  lifetime_log2;  /* 4 bits field. Log2 of the expected lifetime.
@@ -78,7 +78,7 @@ With a table of 64K, the total size of the data structure is
 32*65536 = 2Mbytes, which is well within the size of the L2 cache
 of a lot of the modern CPUs, so even though the linear array
 is not a very efficient way to store and retrieve the data,
-it should be prefetch-friendly thus may give a usable performance 
+it should be prefetch-friendly thus may give a usable performance
 from the get-go. Under this assumption, we leave the optimizations
 to another, more sophisticated implementation.
 
@@ -86,10 +86,10 @@ to another, more sophisticated implementation.
 
 
 typedef struct ipcookie_cache_struct {
-  uint16_t entry_count; 
+  uint16_t entry_count;
   uint8_t padding[14];
   struct ipcookie_entry entries[65536];
-} ipcookie_cache_t; 
+} ipcookie_cache_t;
 
 
 
@@ -102,13 +102,13 @@ typedef struct ipcookie_full_state {
 
 /********************************************************************
 
-Therea are two ICMP messages in the protocol: SET-COOKIE and 
+There are two ICMP messages in the protocol: SET-COOKIE and
 SETCOOKIE-NOT-EXPECTED.
 
-Cookie daemon's job is relatively simple: listen to the received 
+Cookie daemon's job is relatively simple: listen to the received
 ICMP messages, verify them against the existing cookie,
-and if this verification process passes, update the cookie 
-values into the table. 
+and if this verification process passes, update the cookie
+values into the table.
 
 The first one is the message to set/correct the cookie, sent by a responder
 peer.
@@ -118,7 +118,7 @@ we copy the sender's cookie into an SETCOOKIE-NOT-EXPECTED message and
 reply with that message back to the sender.
 
 If we receive SET-COOKIE and the cookie entry for the peer exists,
-we verify that echoed cookie in this message matches the entry, 
+we verify that echoed cookie in this message matches the entry,
 and then use the suggested cookie to update the table.
 We also update the lifetime_log2 from the received packet.
 This will allow us to (somewhat) detect the blackholes which
@@ -141,15 +141,15 @@ ignored, possibly with rate-limited logging.
 
 The shim's job is two fold:
 
-On the receive path: 
+On the receive path:
 
-It needs to verify the incoming packets 
+It needs to verify the incoming packets
 which contain the cookie destination option against the stateless
 server CURRENT cookie, and if that fails, attempt to verify against
 server PREVIOUS cookie.
 
 If the verification against CURRENT cookie fails,
-the shim needs to send the SET-COOKIE message containing the 
+the shim needs to send the SET-COOKIE message containing the
 value of the calculated CURRENT cookie, and a copy of the received
 cookie in the echo-cookie field. The packet needs to also contain
 a copy of the halflife_log2 field to inform the remote side on when
