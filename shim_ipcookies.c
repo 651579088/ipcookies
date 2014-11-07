@@ -17,6 +17,7 @@
 #include <fcntl.h>
 
 #include "ipcookies.h"
+#include "shim_ipcookies.h"
 
 void ipcookie_entry_enter_fallback_mode(ipcookie_entry_t *ce) {
   ipcookie_entry_set_disable_cookies(ce);
