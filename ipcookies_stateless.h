@@ -11,6 +11,6 @@ enum {
  *     IPCOOKIE_MATCH_CURR: matched the current cookie
  */
 
-int ipcookie_verify_stateless(ipcookie_t testcookie, struct in6_addr *src);
+int ipcookie_verify_stateless(ipcookie_state_t *state, ipcookie_t testcookie, struct in6_addr *src);
 
-void ipcookie_set_stateless(ipcookie_t *target_cookie, struct in6_addr *peer);
+void ipcookie_set_stateless(ipcookie_state_t *state, ipcookie_t *target_cookie, struct in6_addr *peer);

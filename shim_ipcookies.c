@@ -75,7 +75,7 @@ ipcookie_entry_t *ipcookies_shim_outbound_no_ipcookie_entry(void *ipck, int defa
       ipcookie_entry_clear_disable_cookies(ce);
       ipcookie_entry_set_expecting_setcookie(ce);
       ipcookie_entry_set_lifetime_log2(ce, 0);
-      ipcookie_set_stateless(&ce->ipcookie, peer);
+      ipcookie_set_stateless(&((ipcookie_full_state_t *)ipck)->state, &ce->ipcookie, peer);
     } else {
       ipcookie_entry_set_disable_cookies(ce);
       ipcookie_entry_clear_expecting_setcookie(ce);
@@ -111,14 +111,14 @@ int ipcookies_shim_inbound_check_cookie(void *ipck, struct in6_addr *peer, void 
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
   ipcookie_t *rcvd_cookie_p = cookie;
-  int res = ipcookie_verify_stateless(cookie, peer);
+  int res = ipcookie_verify_stateless(&((ipcookie_full_state_t *)ipck)->state, cookie, peer);
 
   if (res < IPCOOKIE_MATCH_CURR) {
     /* Either no match or the match on prev cookie, build and send SET-COOKIE */
     icmp->icmp6_type = ICMP6_IPCOOKIES;
     icmp->icmp6_code = ICMP6_IC_SET_COOKIE;
     memcpy(icmp_ipck->echoed_cookie, cookie, sizeof(icmp_ipck->echoed_cookie));
-    ipcookie_set_stateless(&icmp_ipck->requested_cookie, peer);
+    ipcookie_set_stateless(&((ipcookie_full_state_t *)ipck)->state, &icmp_ipck->requested_cookie, peer);
     ipcookies_icmp_send(buf, peer);
   }
   return res;

@@ -18,10 +18,9 @@
 
 #include "ipcookies.h"
 
-ipcookie_full_state_t *ipck = NULL;
 
 
-void process_icmp_set_cookie(void *buf, struct sockaddr_in6 icmp_src_addr) {
+void process_icmp_set_cookie(ipcookie_full_state_t *ipck, void *buf, struct sockaddr_in6 icmp_src_addr) {
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
   ipcookie_entry_t *ce = ipcookie_find_by_address(ipck, &icmp_src_addr.sin6_addr);
@@ -47,10 +46,10 @@ void process_icmp_set_cookie(void *buf, struct sockaddr_in6 icmp_src_addr) {
   }
 }
 
-void process_icmp_setcookie_not_expected(void *buf, struct sockaddr_in6 icmp_src_addr) {
+void process_icmp_setcookie_not_expected(ipcookie_full_state_t *ipck, void *buf, struct sockaddr_in6 icmp_src_addr) {
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
-  int cookie_ok = ipcookie_verify_stateless(icmp_ipck->echoed_cookie, &icmp_src_addr.sin6_addr);
+  int cookie_ok = ipcookie_verify_stateless(&ipck->state, icmp_ipck->echoed_cookie, &icmp_src_addr.sin6_addr);
   if (cookie_ok) {
     printf("cookied: received a valid setcookie_not_expected");
     if (AF_INET6 == icmp_src_addr.sin6_family) {
@@ -62,7 +61,7 @@ void process_icmp_setcookie_not_expected(void *buf, struct sockaddr_in6 icmp_src
   }
 }
 
-void receive_icmp(int icmp_sock) {
+void receive_icmp(ipcookie_full_state_t *ipck, int icmp_sock) {
   uint8_t buf[IPCOOKIES_PACKET_BUF_SIZE];
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
@@ -77,10 +76,10 @@ void receive_icmp(int icmp_sock) {
     if(ICMP6_IPCOOKIES == icmp->icmp6_type) {
       switch(icmp->icmp6_code) {
         case ICMP6_IC_SET_COOKIE:
-          process_icmp_set_cookie(buf, icmp_src_addr);
+          process_icmp_set_cookie(ipck, buf, icmp_src_addr);
           break;
 	case ICMP6_IC_SETCOOKIE_NOT_EXPECTED:
-          process_icmp_setcookie_not_expected(buf, icmp_src_addr);
+          process_icmp_setcookie_not_expected(ipck, buf, icmp_src_addr);
           break;
       }
     }
@@ -90,6 +89,7 @@ void receive_icmp(int icmp_sock) {
 
 int main(int argc, char *argv[]) {
   int icmp_sock = -1;
+  ipcookie_full_state_t *ipck = NULL;
 
   icmp_sock = socket(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
   if (icmp_sock == -1) {
@@ -100,6 +100,6 @@ int main(int argc, char *argv[]) {
   
   memset(ipck, 0, sizeof(*ipck));
   while(1) {
-    receive_icmp(icmp_sock);
+    receive_icmp(ipck, icmp_sock);
   }
 }
