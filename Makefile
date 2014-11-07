@@ -1,3 +1,8 @@
+UNAME := $(shell uname)
+ifeq ($(UNAME), Linux)
+ LDFLAGS=-lrt
+endif
+
 all: cookied shim_ipcookies
 
 cookied: cookied.c ipcookies.c
