@@ -67,18 +67,37 @@ void ipcookies_shim_outbound_ipcookie_entry_exists(ipcookie_entry_t *ce, struct 
   }
 }
 
-void ipcookies_shim_outbound_no_ipcookie_entry(ipcookie_entry_t *ce, struct in6_addr *peer, void **ret_cookie) {
-  /* FIXME */
+ipcookie_entry_t *ipcookies_shim_outbound_no_ipcookie_entry(void *ipck, int default_use_ipcookies, struct in6_addr *peer, void **ret_cookie) {
+  ipcookie_entry_t *ce = ipcookie_entry_allocate(ipck);
+  if (ce) {
+    if (default_use_ipcookies) {
+      ipcookie_entry_clear_disable_cookies(ce);
+      ipcookie_entry_set_expecting_setcookie(ce);
+      ipcookie_entry_set_lifetime_log2(ce, 0);
+      ipcookie_set_stateless(&ce->ipcookie, peer);
+    } else {
+      ipcookie_entry_set_disable_cookies(ce);
+      ipcookie_entry_clear_expecting_setcookie(ce);
+      ipcookie_entry_set_lifetime_log2(ce, IPCOOKIE_LIFETIME_LOG2_INFINITE);
+      memset(ce->ipcookie, 0, sizeof(ce->ipcookie));
+    }
+    ipcookie_entry_update_mtime(ce);
+  }
+  return ce;
 }
 
-int ipcookies_shim_outbound_cookie(void *ipck, struct in6_addr *peer, void **ret_cookie) {
+int ipcookies_shim_outbound_cookie(void *ipck, int default_use_ipcookies, struct in6_addr *peer, void **ret_cookie) {
   ipcookie_entry_t *ce = ipcookie_find_by_address(ipck, peer);
   if (ce) {
     ipcookies_shim_outbound_ipcookie_entry_exists(ce, peer, ret_cookie);
   } else {
-    ipcookies_shim_outbound_no_ipcookie_entry(ce, peer, ret_cookie);
+    ce = ipcookies_shim_outbound_no_ipcookie_entry(ipck, default_use_ipcookies, peer, ret_cookie);
   }
-  return (!ipcookie_entry_isset_disable_cookies(ce));
+  if (ce) {
+    return (!ipcookie_entry_isset_disable_cookies(ce));
+  } else {
+    return 0;
+  }
 }
 
 int ipcookies_shim_inbound_check_cookie(void *ipck, struct in6_addr *peer, void *cookie) {

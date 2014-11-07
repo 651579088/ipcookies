@@ -42,6 +42,10 @@ ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct i
   return NULL;
 }
 
+ipcookie_entry_t *ipcookie_entry_allocate(ipcookie_full_state_t *ipck) {
+  return NULL;
+}
+
 /*
  * It's rather ugly to have them here but for now a separate header file
  * just to hide the flags would confuse more than help.

@@ -68,6 +68,8 @@ typedef struct ipcookie_entry {
   ipcookie_t ipcookie;     /* The ipcookie itself */
 } ipcookie_entry_t;
 
+#define IPCOOKIE_LIFETIME_LOG2_INFINITE 0xF
+
 
 /* #define IPCOOKIE_ENTRY_FLAG_DISABLE_COOKIES please_use_functions_below_to_check_and_set */
 
@@ -360,6 +362,7 @@ void die_perror(char *msg);
 
 void ipcookies_icmp_send(void *buf, struct in6_addr *icmp_dst_addr);
 ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct in6_addr *src);
+ipcookie_entry_t *ipcookie_entry_allocate(ipcookie_full_state_t *ipck);
 
 void ipcookie_entry_update_mtime(ipcookie_entry_t *ce);
 void ipcookie_entry_set_lifetime_log2(ipcookie_entry_t *ce, int new_lifetime_log2);
