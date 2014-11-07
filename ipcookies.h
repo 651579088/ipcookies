@@ -167,30 +167,40 @@ exists. If it exists, we act according to following:
 ENTRY EXISTS {
 We need to check the current timestamp to be within three cases:
 case 0 : below (mtime_ts+2^lifetime_log2)
-case 1 : between mtime_ts+2^lifetime_log2 and mtime_ts+2*2^lifetime_log2
-case 2 : above 2*2^lifetime_log2
+case 1 : between mtime_ts+2^lifetime_log2 and mtime_ts+2^lifetime_log2+T_RECOVER
+case 2 : above mtime_ts+2^lifetime_log2 + T_RECOVER
 
-the following two groups are describing behavior on whether te DISABLE_COOKIES flag
+the following two groups are describing behavior depending on whether the DISABLE_COOKIES flag
 is set or not.
 
 DISABLE_COOKIES is set:
 case 0: do nothing.
-case 1: do nothing.
+case 1: same as the case 2:
 case 2: fallback wait-out period has expired. Clear DISABLE_COOKIES, update
-the mtime_ts, and set the lifetime_log2 to a policy-defined value of "COOKIE_PROBE_LT2".
+the mtime_ts with the current timestamp, and set the lifetime_log2 to
+a policy-defined value of "COOKIE_TRY_LT2".
 
 DISABLE_COOKIES is cleared:
 case 0: do nothing.
 case 1: raise IPCOOKIE_EXPECTING_SETCOOKIE flag.
-case 2: if IPCOOKIE_EXPECTING_SETCOOKIE flag is raised, that means we did sent traffic
-but did not hear anything back. Therefore we can assume that the path has changed and
-the cookies or ICMP signaling are blocked, so we need to set the DISABLE_COOKIES and
-update the mtime_ts. We also need to set the lifetime_log2 to a policy-defined value
-which will determine the duration of the fallback period - "COOKIE_FALLBACK_LT2".
+case 2: is IPCOOKIE_EXPECTING_SETCOOKIE flag set ?
+  * yes: that means we did sent traffic earlier but did not hear anything back.
+    Therefore we can assume that the path has changed and the cookies or
+    ICMP signaling are blocked, so we need to set the DISABLE_COOKIES and
+    update the mtime_ts to the current timestamp. We also need to set
+    the lifetime_log2 to a policy-defined value which will determine
+    the duration of the fallback period - "COOKIE_FALLBACK_LT2".
+  * no: this means that we missed the time window due to not sending the traffic.
+    We can not just set the IPCOOKIE_EXPECTING_SETCOOKIE, because the next egress
+    packet would cause a fallback process to be triggered. So, together with setting
+    the IPCOOKIE_EXPECTING_SETCOOKIE flag we need to ALSO "rewind"
+    the timestamp by setting it to a value (time_now-2^lifetime_log) - so that we
+    allow the protocol on the other side T_RECOVER seconds to react and send the SETCOOKIE
+    before the fallback is triggered.
 
-NB: the above recovery mechanism is obviously inefficient. For now we define it this way
-only for simplicity sake. There are certainly better and quicker ways to recover, but
-we leave them for a more optimized implementation - since they are locally-significant only.
+NB: There might be other ways to optimize of the recovery, but since the recovery
+algorithm is locally significant on the initiator, the above paragraph is not a hard
+requirement for a node to implement verbatim.
 
 }
 
@@ -198,18 +208,27 @@ If the entry does not exist:
 
 ENTRY DOES NOT EXIST {
   we need to allocate a new entry for this peer, using FIFO or some other
-  queue management algorithm to evict the old entries. 
+  queue management algorithm to evict the old entries.
 
-  The new entry gets DISABLE_COOKIES flag set or cleared depending on the local policy,
-  the mtime_ts is set to the current timestamp, and lifetime_log2 is set to the value of zero 
-  (or other administratively defined value).
+  The new entry has mtime_ts set to the current timestamp.
+
+  The new entry gets DISABLE_COOKIES flag set or cleared depending on the local policy -
+  whether the host wishes to use this mechanism with the conversation or not.
+
+  If the DISABLE_COOKIES is cleared (cookies active): set the lifetime_log2 to zero, and set
+  IPCOOKIE_EXPECTING_SETCOOKIE flag.
+
+  If the DISABLE_COOKIES is set (cookies inactive): set the lifetime_log2 to 0xf ("infinity"),
+  or to another value if the application would like to try the cookies at a later time in lifetime
+  of the conversation. clear the IPCOOKIE_EXPECTING_SETCOOKIE flag.
+
 
 }
 
-The next thing we do is make a decision whether to add the cookie option 
-to the packet, or to send it as is. For this we will look at 
+The next thing we do is make a decision whether to add the cookie option
+to the packet, or to send it as is. For this we will look at
 the DISABLE_COOKIES flag. In this conceptual implementation we present this
-as two separate lookups with the above, to modularize it. A more optimized 
+as two separate lookups with the above, to modularize it. A more optimized
 implementation is certainly possible, but is not a focus at this time.
 
 If the flag DISABLE_COOKIES is set, then the packet needs to be sent as-is,
