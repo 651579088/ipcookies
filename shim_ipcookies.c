@@ -120,19 +120,13 @@ int ipcookies_shim_outbound_cookie(void *ipck, int default_use_ipcookies, struct
 }
 
 int ipcookies_shim_inbound_check_cookie(void *ipck, struct in6_addr *peer, void *cookie) {
-  uint8_t buf[IPCOOKIES_ICMP_SIZE];
-  struct icmp6_hdr *icmp = (void *)buf;
-  struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
-  ipcookie_t *rcvd_cookie_p = cookie;
+  ipcookie_t requested_cookie;
   int res = ipcookie_verify_stateless(&((ipcookie_full_state_t *)ipck)->state, cookie, peer);
 
   if (res < IPCOOKIE_MATCH_CURR) {
     /* Either no match or the match on prev cookie, build and send SET-COOKIE */
-    icmp->icmp6_type = ICMP6_IPCOOKIES;
-    icmp->icmp6_code = ICMP6_IC_SET_COOKIE;
-    memcpy(icmp_ipck->echoed_cookie, cookie, sizeof(icmp_ipck->echoed_cookie));
-    ipcookie_set_stateless(&((ipcookie_full_state_t *)ipck)->state, &icmp_ipck->requested_cookie, peer);
-    ipcookies_icmp_send(buf, peer);
+    ipcookie_set_stateless(&((ipcookie_full_state_t *)ipck)->state, &requested_cookie, peer);
+    ipcookies_icmp_send(ICMP6_IC_SET_COOKIE, cookie, &requested_cookie, peer);
   }
   return res;
 }

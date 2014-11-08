@@ -39,10 +39,7 @@ void process_icmp_set_cookie(ipcookie_full_state_t *ipck, void *buf, struct sock
     }
   } else {
     /* Could not find cookie entry, so need to send back SETCOOKIE-NOT-EXPECTED */
-    memcpy(icmp_ipck->echoed_cookie, icmp_ipck->requested_cookie, sizeof(icmp_ipck->echoed_cookie));
-    memset(icmp_ipck->requested_cookie, 0, sizeof(icmp_ipck->requested_cookie));
-    icmp->icmp6_code = ICMP6_IC_SETCOOKIE_NOT_EXPECTED;
-    ipcookies_icmp_send(buf, &icmp_src_addr.sin6_addr);
+    ipcookies_icmp_send(ICMP6_IC_SETCOOKIE_NOT_EXPECTED, &icmp_ipck->requested_cookie, NULL, &icmp_src_addr.sin6_addr);
   }
 }
 

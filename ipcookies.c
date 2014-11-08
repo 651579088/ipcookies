@@ -23,15 +23,25 @@ void die_perror(char *msg) {
   exit(1);
 }
 
-void ipcookies_icmp_send(void *buf, struct in6_addr *icmp_dst_addr) {
+void ipcookies_icmp_send(uint8_t code, ipcookie_t *echoed_cookie,
+                         ipcookie_t *requested_cookie, struct in6_addr *icmp_dst_addr) {
   static int icmp_sock = -1;
   struct sockaddr_in6 sa_dst;
+  uint8_t buf[IPCOOKIES_ICMP_SIZE];
+  struct icmp6_hdr *icmp = (void *)buf;
+  struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
+  ipcookie_t zero_cookie = { 0 };
 
   if (icmp_sock < 0) {
     icmp_sock = socket(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
   }
   if (icmp_sock > 0) {
     /* FIXME: recalculate the checksum here */
+    icmp->icmp6_type = ICMP6_IPCOOKIES;
+    icmp->icmp6_code = code;
+    memcpy(icmp_ipck->echoed_cookie, echoed_cookie ? echoed_cookie : &zero_cookie, sizeof(icmp_ipck->echoed_cookie));
+    memcpy(icmp_ipck->requested_cookie, requested_cookie ? requested_cookie : &zero_cookie, sizeof(icmp_ipck->requested_cookie));
+
     sa_dst.sin6_family = AF_INET6;
     sa_dst.sin6_addr = *icmp_dst_addr;
     sendto(icmp_sock, buf, IPCOOKIES_ICMP_SIZE, 0, (struct sockaddr *)&sa_dst, sizeof(sa_dst));

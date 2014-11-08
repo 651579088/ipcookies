@@ -368,7 +368,8 @@ typedef struct icmp6_ipcookies {
 ipcookie_full_state_t *mmap_ipcookies(void);
 void die_perror(char *msg);
 
-void ipcookies_icmp_send(void *buf, struct in6_addr *icmp_dst_addr);
+void ipcookies_icmp_send(uint8_t code, ipcookie_t *echoed_cookie,
+                         ipcookie_t *requested_cookie, struct in6_addr *icmp_dst_addr);
 ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct in6_addr *src);
 ipcookie_entry_t *ipcookie_entry_allocate(ipcookie_full_state_t *ipck);
 
