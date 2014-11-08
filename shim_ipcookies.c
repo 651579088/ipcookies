@@ -38,6 +38,19 @@ void ipcookie_entry_past_renew_with_cookie(ipcookie_entry_t *ce, struct in6_addr
   }
 }
 
+void ipcookie_entry_within_renew_with_cookie(ipcookie_entry_t *ce) {
+  /*
+   * If the expecting cookie flag is not set, set it
+   * and rewind the mtime so that we wait for
+   * the whole recovery interval before a fallback
+   * may occur.
+   */
+  if (!ipcookie_entry_isset_expecting_setcookie(ce)) {
+    ipcookie_entry_set_expecting_setcookie(ce);
+    ipcookie_entry_mtime_backdate_by_lifetime_log2(ce);
+  }
+}
+
 void ipcookies_shim_outbound_ipcookie_entry_exists(ipcookie_entry_t *ce, struct in6_addr *peer, void **ret_cookie) {
   int ts_check = check_ipcookie_entry_timestamp(ce);
   if(ipcookie_entry_isset_disable_cookies(ce)) {
@@ -59,7 +72,7 @@ void ipcookies_shim_outbound_ipcookie_entry_exists(ipcookie_entry_t *ce, struct 
 	/* do nothing */
 	break;
       case IPCOOKIE_TS_RENEW_TIME:
-	ipcookie_entry_set_expecting_setcookie(ce);
+	ipcookie_entry_within_renew_with_cookie(ce);
 	break;
       case IPCOOKIE_TS_PAST_RENEW_TIME:
         ipcookie_entry_past_renew_with_cookie(ce, peer, ret_cookie);

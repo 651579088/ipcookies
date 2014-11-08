@@ -244,7 +244,15 @@ a policy-defined value of "COOKIE_TRY_LT2".
 
 DISABLE_COOKIES is cleared:
 case 0: do nothing.
-case 1: raise IPCOOKIE_EXPECTING_SETCOOKIE flag.
+case 1: is IPCOOKIE_EXPECTING_SETCOOKIE flag set ?
+  * yes: do nothing
+  * no: this is the first outbound packet during the rollover period.
+    set the IPCOOKIE_EXPECTING_SETCOOKIE.
+    Also, we need to ensure we always wait for the entirety of IPCOOKIE_T_RECOVER
+    period to receive SET-COOKIE, once we sent the packet out.
+    If we do not do this, if we were in the very end of the rollover period,
+    we might spuriously enter the recovery mode. Therefore the timestamp needs
+    to be set to (time_now-2^lifetime_log) as well.
 case 2: is IPCOOKIE_EXPECTING_SETCOOKIE flag set ?
   * yes: that means we did sent traffic earlier but did not hear anything back.
     Therefore we can assume that the path has changed and the cookies or
