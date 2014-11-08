@@ -46,7 +46,7 @@ void process_icmp_set_cookie(ipcookie_full_state_t *ipck, void *buf, struct sock
 void process_icmp_setcookie_not_expected(ipcookie_full_state_t *ipck, void *buf, struct sockaddr_in6 icmp_src_addr) {
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
-  int cookie_ok = ipcookie_verify_stateless(&ipck->state, icmp_ipck->echoed_cookie, &icmp_src_addr.sin6_addr);
+  int cookie_ok = ipcookie_verify_stateless(&ipck->state, &icmp_ipck->echoed_cookie, &icmp_src_addr.sin6_addr);
   if (cookie_ok) {
     printf("cookied: received a valid setcookie_not_expected");
     if (AF_INET6 == icmp_src_addr.sin6_family) {

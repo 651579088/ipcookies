@@ -18,30 +18,11 @@ ipcookie_cache_t ipcookie_cache;
 
 The first one maintains the cookie-related state for the host
 for the stateless "server" portion of the cookies:
+(also the below include file defines how the cookie is calculated)
 
 ********************************************************************/
 
-typedef struct ipcookie_state {
-  time_t timestamp_prev; /* when was the previous ipcookie generation */
-  time_t timestamp_curr; /* when was the current ipcookie generation */
-  uint8_t halflife_log2; /* Cookie's lifetime is 2*2^halflife_log2 seconds, 4 bit field */
-  char ipcookie_secret[63]; /* the secret data for ipcookie creation */
-} ipcookie_state_t;
-
-/********************************************************************
-
-In order to generate the current and previous cookies, the corresponding
-dataplane function takes the timestamp_curr or timestamp_prev, mixes in
-the peer address and the secret_len of ipcookie_secret, and passes it
-to the strong hash function.
-
-Then the resulting cookie is the 96 lowest significant bits of that
-hash value:
-
-********************************************************************/
-
-typedef uint8_t ipcookie_t[12];
-
+#include "ipcookies_stateless.h"
 
 /********************************************************************
 
@@ -377,5 +358,4 @@ void ipcookie_entry_update_mtime(ipcookie_entry_t *ce);
 void ipcookie_entry_set_lifetime_log2(ipcookie_entry_t *ce, int new_lifetime_log2);
 void ipcookie_entry_mtime_backdate_by_lifetime_log2(ipcookie_entry_t *ce);
 
-#include "ipcookies_stateless.h"
 
