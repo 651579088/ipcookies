@@ -85,11 +85,14 @@ uint8_t ipcookie_entry_get_lifetime_log2(ipcookie_entry_t *ce) {
   return (ce->flags_and_lifetime_log2 & IPCOOKIE_ENTRY_MASK_LIFETIME_LOG2);
 }
 
+void ipcookie_entry_set_mtime(ipcookie_entry_t *ce, time_t now) {
+  ce->mtime_lo16 = 0xffff & now;
+  ce->mtime_hi8 = 0xff & (now >> 16);
+}
 
 void ipcookie_entry_update_mtime(ipcookie_entry_t *ce) {
   time_t now = time(NULL);
-  ce->mtime_lo16 = 0xffff & now;
-  ce->mtime_hi8 = 0xff & (now >> 16);
+  ipcookie_entry_set_mtime(ce, now);
 }
 
 /* Expand the timestamp from the low 24 bits */
@@ -126,6 +129,8 @@ void ipcookie_entry_set_lifetime_log2(ipcookie_entry_t *ce, int new_lifetime_log
 }
 
 void ipcookie_entry_mtime_backdate_by_lifetime_log2(ipcookie_entry_t *ce) {
+  time_t backdated_now = time(NULL) - (1 << ipcookie_entry_get_lifetime_log2(ce));
+  ipcookie_entry_set_mtime(ce, backdated_now);
 }
 
 
