@@ -3,15 +3,36 @@ ifeq ($(UNAME), Linux)
  LDFLAGS=-lrt
 endif
 
+IPCOOKIES_OBJS = \
+	ipcookies.o \
+	ipcookies_stateless.o \
+	ipcookies_cache.o
+
+IPCOOKIES_HDRS = \
+	ipcookies.h \
+	ipcookies_cache.h \
+	ipcookies_stateless.h
+
 all: cookied shim_ipcookies
 
-cookied: cookied.c ipcookies.c ipcookies_stateless.c ipcookies_cache.c
-	$(CC) $(CFLAGS) cookied.c ipcookies_stateless.c ipcookies.c ipcookies_cache.c -o cookied $(LDFLAGS)
+.c.o:
+	$(CC) -c $(CFLAGS) $<
 
-shim_ipcookies: shim_ipcookies.c ipcookies.c ipcookies_stateless.c ipcookies_cache.c
-	$(CC) $(CFLAGS) shim_ipcookies.c ipcookies_stateless.c ipcookies.c ipcookies_cache.c -o shim_ipcookies $(LDFLAGS)
+ipcookies.h: ipcookies_cache.h ipcookies_stateless.h
+	touch ipcookies.h
+
+ipcookies.o: ipcookies.h
+ipcookies_stateless.o: ipcookies.h
+ipcookies_cache.o: ipcookies.h
+
+cookied: cookied.o $(IPCOOKIES_OBJS)
+	$(CC) $(CFLAGS) $< $(IPCOOKIES_OBJS) -o $@ $(LDFLAGS)
+
+shim_ipcookies: shim_ipcookies.o $(IPCOOKIES_OBJS) $(IPCOOKIES_HDRS) shim_ipcookies.h
+	$(CC) $(CFLAGS) $< $(IPCOOKIES_OBJS) -o $@ $(LDFLAGS)
 
 .PHONY: clean
 clean:
 	rm -f cookied
 	rm -f shim_ipcookies
+	rm -f *.o
