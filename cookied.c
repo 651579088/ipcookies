@@ -23,7 +23,7 @@
 void process_icmp_set_cookie(ipcookie_full_state_t *ipck, void *buf, struct sockaddr_in6 icmp_src_addr) {
   struct icmp6_hdr *icmp = (void *)buf;
   struct icmp6_ipcookies *icmp_ipck = (void *)(icmp+1);
-  ipcookie_entry_t *ce = ipcookie_find_by_address(ipck, &icmp_src_addr.sin6_addr);
+  ipcookie_entry_t *ce = ipcookie_cache_entry_find_by_address(&ipck->cache, &icmp_src_addr.sin6_addr);
   if(ce) {
     if(!memcmp(ce->ipcookie, icmp_ipck->echoed_cookie, sizeof(ce->ipcookie))) {
       /* The echoed cookie has matched. We can update the entry. */

@@ -5,11 +5,11 @@ endif
 
 all: cookied shim_ipcookies
 
-cookied: cookied.c ipcookies.c ipcookies_stateless.c
-	$(CC) $(CFLAGS) cookied.c ipcookies_stateless.c ipcookies.c -o cookied $(LDFLAGS)
+cookied: cookied.c ipcookies.c ipcookies_stateless.c ipcookies_cache.c
+	$(CC) $(CFLAGS) cookied.c ipcookies_stateless.c ipcookies.c ipcookies_cache.c -o cookied $(LDFLAGS)
 
-shim_ipcookies: shim_ipcookies.c ipcookies.c ipcookies_stateless.c
-	$(CC) $(CFLAGS) shim_ipcookies.c ipcookies_stateless.c ipcookies.c -o shim_ipcookies $(LDFLAGS)
+shim_ipcookies: shim_ipcookies.c ipcookies.c ipcookies_stateless.c ipcookies_cache.c
+	$(CC) $(CFLAGS) shim_ipcookies.c ipcookies_stateless.c ipcookies.c ipcookies_cache.c -o shim_ipcookies $(LDFLAGS)
 
 .PHONY: clean
 clean:

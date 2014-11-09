@@ -64,27 +64,7 @@ void ipcookie_entry_set_expecting_setcookie(ipcookie_entry_t *ce);
 void ipcookie_entry_clear_expecting_setcookie(ipcookie_entry_t *ce);
 int ipcookie_entry_isset_expecting_setcookie(ipcookie_entry_t *ce);
 
-
-/********************************************************************
-
-With a table of 64K, the total size of the data structure is
-32*65536 = 2Mbytes, which is well within the size of the L2 cache
-of a lot of the modern CPUs, so even though the linear array
-is not a very efficient way to store and retrieve the data,
-it should be prefetch-friendly thus may give a usable performance
-from the get-go. Under this assumption, we leave the optimizations
-to another, more sophisticated implementation.
-
-********************************************************************/
-
-
-typedef struct ipcookie_cache_struct {
-  uint16_t entry_count;
-  uint8_t padding[14];
-  struct ipcookie_entry entries[65536];
-} ipcookie_cache_t;
-
-
+#include "ipcookies_cache.h"
 
 typedef struct ipcookie_full_state {
   ipcookie_state_t state;
@@ -351,8 +331,6 @@ void die_perror(char *msg);
 
 void ipcookies_icmp_send(uint8_t code, ipcookie_t *echoed_cookie,
                          ipcookie_t *requested_cookie, struct in6_addr *icmp_dst_addr);
-ipcookie_entry_t *ipcookie_find_by_address(ipcookie_full_state_t *ipck, struct in6_addr *src);
-ipcookie_entry_t *ipcookie_entry_allocate(ipcookie_full_state_t *ipck);
 
 void ipcookie_entry_update_mtime(ipcookie_entry_t *ce);
 void ipcookie_entry_set_lifetime_log2(ipcookie_entry_t *ce, int new_lifetime_log2);

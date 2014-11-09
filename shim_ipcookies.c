@@ -82,7 +82,7 @@ void ipcookies_shim_outbound_ipcookie_entry_exists(ipcookie_entry_t *ce, struct 
 }
 
 ipcookie_entry_t *ipcookies_shim_outbound_no_ipcookie_entry(void *ipck, int default_use_ipcookies, struct in6_addr *peer, void **ret_cookie) {
-  ipcookie_entry_t *ce = ipcookie_entry_allocate(ipck);
+  ipcookie_entry_t *ce = ipcookie_cache_entry_allocate(&((ipcookie_full_state_t *)ipck)->cache, peer);
   if (ce) {
     if (default_use_ipcookies) {
       ipcookie_entry_clear_disable_cookies(ce);
@@ -101,7 +101,7 @@ ipcookie_entry_t *ipcookies_shim_outbound_no_ipcookie_entry(void *ipck, int defa
 }
 
 int ipcookies_shim_outbound_cookie(void *ipck, int default_use_ipcookies, struct in6_addr *peer, void **ret_cookie) {
-  ipcookie_entry_t *ce = ipcookie_find_by_address(ipck, peer);
+  ipcookie_entry_t *ce = ipcookie_cache_entry_find_by_address(&((ipcookie_full_state_t *)ipck)->cache, peer);
   if (ce) {
     ipcookies_shim_outbound_ipcookie_entry_exists(ce, peer, ret_cookie);
   } else {
